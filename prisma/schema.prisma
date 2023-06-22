@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = "sqlserver://localhost:1433;database=vuelosBD;initialCatalog=sample;integratedSecurity=true;trustServerCertificate=true;"
+}
+
+model aerolineas {
+  codigo_iata String   @id(map: "aerolineas_pk") @db.Char(2)
+  nombre      String   @db.VarChar(100)
+  vuelos      vuelos[]
+}
+
+model aeropuertos {
+  codigo_iata                               String    @id(map: "aeropuertos_pk") @db.Char(3)
+  nombre                                    String    @db.VarChar(100)
+  pais                                      String?   @db.Char(2)
+  ciudad                                    String    @db.VarChar(100)
+  latitud                                   Decimal   @db.Decimal(12, 8)
+  longitud                                  Decimal   @db.Decimal(12, 8)
+  paises                                    paises?   @relation(fields: [pais], references: [codigo_iso], onDelete: NoAction, onUpdate: NoAction, map: "aeropuertos_paises_fk")
+  escalas                                   escalas[]
+  vuelos_vuelos_codigo_origenToaeropuertos  vuelos[]  @relation("vuelos_codigo_origenToaeropuertos")
+  vuelos_vuelos_codigo_destinoToaeropuertos vuelos[]  @relation("vuelos_codigo_destinoToaeropuertos")
+}
+
+model aviones {
+  id_avion           Int    @id(map: "aviones_pk") @default(autoincrement())
+  nombre             String @db.VarChar(100)
+  asientos_economica Int
+  asientos_negocios  Int
+}
+
+model boleto {
+  id_boleto           Int                   @id(map: "boleto_pk") @default(autoincrement())
+  pasaporte_pasajero  String                @db.VarChar(50)
+  n_vuelo             String                @db.VarChar(200)
+  fecha_compra        DateTime              @db.Date
+  clase               String                @db.VarChar(100)
+  precio              Decimal               @db.Decimal(6, 2)
+  n_boleto            String?               @db.Char(10)
+  checkin             checkin?
+  pasajeros_atrasados pasajeros_atrasados[]
+}
+
+model checkin {
+  id_boleto          Int       @id(map: "checkin_pk")
+  pasaporte_pasajero String    @db.VarChar(50)
+  n_vuelo            String    @db.VarChar(100)
+  fecha              DateTime  @db.Date
+  hora               DateTime  @db.Time
+  estado             String    @db.VarChar(100)
+  boleto             boleto    @relation(fields: [id_boleto], references: [id_boleto], onUpdate: NoAction, map: "checkin_boleto_fk")
+  pasajeros          pasajeros @relation(fields: [pasaporte_pasajero], references: [n_pasaporte], onUpdate: NoAction, map: "checkin_pasajeros_fk")
+  vuelos             vuelos    @relation(fields: [n_vuelo], references: [n_vuelo], onUpdate: NoAction, map: "checkin_vuelos_fk")
+}
+
+model correos {
+  id_correo          Int        @id(map: "correos_pk") @default(autoincrement())
+  pasaporte_pasajero String?    @db.VarChar(50)
+  correo             String     @db.VarChar(50)
+  pasajeros          pasajeros? @relation(fields: [pasaporte_pasajero], references: [n_pasaporte], onDelete: NoAction, onUpdate: NoAction, map: "correos_pasajeros_fk")
+}
+
+model escalas {
+  id_escala         Int          @id(map: "escalas_pk") @default(autoincrement())
+  n_vuelo           String?      @db.VarChar(100)
+  codigo_aeropuerto String?      @db.Char(3)
+  fecha             DateTime     @db.Date
+  hora_llegada      DateTime     @db.Time
+  hora_salida       DateTime     @db.Time
+  orden             Int
+  aeropuertos       aeropuertos? @relation(fields: [codigo_aeropuerto], references: [codigo_iata], onDelete: NoAction, onUpdate: NoAction, map: "escalas_aeropuertos_fk")
+  vuelos            vuelos?      @relation(fields: [n_vuelo], references: [n_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "escalas_vuelos_fk")
+}
+
+model paises {
+  codigo_iso  String        @id(map: "paises_pk") @db.Char(2)
+  nombre      String        @db.VarChar(100)
+  pasajeros   pasajeros[]
+  aeropuertos aeropuertos[]
+}
+
+model pasajeros {
+  n_pasaporte         String                @id(map: "pasajeros_pk") @db.VarChar(50)
+  nombres             String                @db.VarChar(100)
+  apellidos           String                @db.VarChar(100)
+  fecha_nacimiento    DateTime              @db.Date
+  genero              String                @db.VarChar(100)
+  pais                String?               @db.Char(2)
+  checkin             checkin[]
+  correos             correos[]
+  paises              paises?               @relation(fields: [pais], references: [codigo_iso], onDelete: NoAction, onUpdate: NoAction, map: "pasajeros_paises_fk")
+  pasajeros_atrasados pasajeros_atrasados[]
+  telefonos           telefonos[]
+}
+
+model pasajeros_atrasados {
+  id_atrasado        Int       @id(map: "pasajeros_atrasados_pk") @default(autoincrement())
+  pasaporte_pasajero String    @db.VarChar(50)
+  id_boleto          Int
+  motivo             String?   @db.VarChar(200)
+  fecha_registro     DateTime  @db.Date
+  hora_registro      DateTime  @db.Time
+  boleto             boleto    @relation(fields: [id_boleto], references: [id_boleto], onUpdate: NoAction, map: "pasajeros_atrasados_boleto_fk")
+  pasajeros          pasajeros @relation(fields: [pasaporte_pasajero], references: [n_pasaporte], onUpdate: NoAction, map: "pasajeros_atrasados_pasajeros_fk")
+}
+
+model telefonos {
+  id_telefono        Int        @id(map: "telefonos_pk") @default(autoincrement())
+  pasaporte_pasajero String?    @db.VarChar(50)
+  telefono           String     @db.VarChar(50)
+  pasajeros          pasajeros? @relation(fields: [pasaporte_pasajero], references: [n_pasaporte], onDelete: NoAction, onUpdate: NoAction, map: "telefonos_pasajeros_fk")
+}
+
+model vuelos {
+  n_vuelo                                        String       @id(map: "vuelos_pk") @default("x") @db.VarChar(100)
+  codigo_aerolinea                               String       @db.Char(2)
+  id_avion                                       Int
+  codigo_origen                                  String?      @db.Char(3)
+  codigo_destino                                 String?      @db.Char(3)
+  distancia                                      Decimal?     @db.Decimal(12, 4)
+  fecha                                          DateTime     @db.Date
+  hora_salida                                    DateTime     @db.Time
+  hora_llegada                                   DateTime     @db.Time
+  checkin                                        checkin[]
+  escalas                                        escalas[]
+  aerolineas                                     aerolineas   @relation(fields: [codigo_aerolinea], references: [codigo_iata], onUpdate: NoAction, map: "vuelos_aerolineas_fk")
+  aeropuertos_vuelos_codigo_origenToaeropuertos  aeropuertos? @relation("vuelos_codigo_origenToaeropuertos", fields: [codigo_origen], references: [codigo_iata], onDelete: NoAction, onUpdate: NoAction, map: "vuelos_aeropuertos_fk")
+  aeropuertos_vuelos_codigo_destinoToaeropuertos aeropuertos? @relation("vuelos_codigo_destinoToaeropuertos", fields: [codigo_destino], references: [codigo_iata], onDelete: NoAction, onUpdate: NoAction, map: "vuelos_aeropuertos_fkv2")
+}
